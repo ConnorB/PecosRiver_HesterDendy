@@ -1,0 +1,113 @@
+---
+title: "HD"
+author: "CLB"
+date: "9/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(scales)
+library(styler)
+library(Rgb)
+library(lubridate)
+library(dataRetrieval)
+library(vegan)
+```
+
+```{r}
+HD <- read_csv("HD_Final.csv")
+HD_Q <- read_csv("HD_Q.csv")
+
+HD_Q$Site<-factor(HD_Q$Site, levels = c("Orla", "Iraan", "Sheffield"), ordered=TRUE)
+
+```
+```{r}
+ggplot(HD_Q, aes(Date, Q))+
+  geom_line(aes(linetype = Site)) +
+  scale_linetype_manual(values = c("solid", "longdash", "dotted"))+
+  labs(title = "Hester Dendy Discharge (2017)",
+  y = expression(Discharge (m^3/s)))+
+  theme_bw()+
+  scale_x_date(breaks=pretty_breaks())
+```
+```{r}
+HD_Grouped <- HD %>%
+  select(Season, Year, Site, Family, Count)%>%
+  group_by(Season,Year, Site, Family)%>%
+  summarise(Count = sum(Count))
+```
+
+```{r}
+HD_Wide <- spread(HD_Grouped, Family, Count, 0)
+
+#We need a dataframe of each site for diversity
+IraanFall <- HD_Wide %>%
+  filter(Site == "Iraan", Season == "Fall")
+OrlaFall <- HD_Wide %>%
+  filter(Site == "Orla", Season == "Fall")
+OrlaSum <- HD_Wide %>%
+  filter(Site == "Orla", Season == "Summer")
+SheffieldFall <- HD_Wide %>%
+  filter(Site == "Sheffield", Season == "Fall")
+SheffieldSum <- HD_Wide %>%
+  filter(Site == "Sheffield", Season == "Summer")
+
+#Get rid of season, year, site
+IraanFall[1:3] <- NULL
+OrlaFall[1:3] <- NULL
+OrlaSum[1:3] <- NULL
+SheffieldFall[1:3] <- NULL
+SheffieldSum[1:3] <- NULL
+
+#Calcs shannon-weiner diversity
+IraanF_Shan <- diversity(IraanFall, "shannon")
+OrlaF_Shan <- diversity(OrlaFall, "shannon")
+OrlaS_Shan <- diversity(OrlaSum, "shannon")
+SheffieldF_Shan <- diversity(SheffieldFall, "shannon")
+SheffieldS_Shan <- diversity(SheffieldSum, "shannon")
+
+Shannon <- c(IraanF_Shan, OrlaF_Shan, OrlaS_Shan, SheffieldF_Shan, SheffieldS_Shan)
+
+
+#Calcs simpsons diversity
+IraanF_Simp <- diversity(IraanFall, "simpson")
+OrlaF_Simp <- diversity(OrlaFall, "simpson")
+OrlaS_Simp <- diversity(OrlaSum, "simpson")
+SheffieldF_Simp <- diversity(SheffieldFall, "simpson")
+SheffieldS_Simp <- diversity(SheffieldSum, "simpson")
+
+Simpson <- c(IraanF_Simp, OrlaF_Simp, OrlaS_Simp, SheffieldF_Simp, SheffieldS_Simp)
+
+Site <- c("Iraan", "Orla", "Orla", "Sheffield", "Sheffield")
+Season <- c("Fall", "Fall", "Summer", "Fall", "Summer")
+Year <- rep(2017, 5)
+
+HD_Diversity <- data.frame(Site = Site, Season = Season, Year = Year, Shannon = Shannon, Simpson = Simpson)
+
+HD_Diversity$Season <- as.factor(HD_Diversity$Season)
+```
+
+```{r}
+ggplot(HD_Diversity, aes(x = Site, y = Shannon, fill = Season))+
+  geom_bar(stat = "identity", position = "dodge")+
+  theme_bw()
+
+ggplot(HD_Diversity, aes(x = Site, y = Simpson, fill = Season))+
+  geom_bar(stat = "identity", position = "dodge")+
+  theme_bw()
+```
+
+```{r}
+ggplot(HD_Grouped, aes(Site, log(Count), fill = Season))+
+  geom_boxplot()+
+  theme_bw()
+```
+
+
+
