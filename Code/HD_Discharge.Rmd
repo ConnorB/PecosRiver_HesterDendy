@@ -17,6 +17,7 @@ library(scales)
 library(ggthemes)
 library(plotly)
 library(ggpubr)
+library(here)
 ```
 Site number is USGS gage number.
 
@@ -40,12 +41,24 @@ startDate <- "2017-06-01"
 endDate <- "2017-12-07"
 
 #Get daily values from USGS
-pecosQ <- readNWISdv(siteNumbers, parameterCd, startDate, endDate)
+# Changed to inst values, usgs no longer provides avg spc
+pecosQ <- readNWISuv(siteNumbers, parameterCd, startDate, endDate)
 
 pecosQ <- renameNWISColumns(pecosQ)
 #Convert CFS to CMS
-pecosQ$Flow <- (pecosQ$Flow * 0.028316847)
+pecosQ$Flow_Inst <- (pecosQ$Flow_Inst * 0.028316847)
 
+
+# Avg to daily
+pecosQ <- pecosQ |>
+  mutate(Date = as_date(dateTime)) |>
+  select(Date, site_no, Flow_Inst, SpecCond_Inst) |> 
+  group_by(Date, site_no) |>
+  summarise(
+    Flow = mean(Flow_Inst, na.rm = T),
+    SpecCond = mean(SpecCond_Inst, na.rm = T),
+    .groups = "drop"
+  )
 ```
 
 Create Site column with site names based of of gage number and save to csv
@@ -59,8 +72,6 @@ pecosQ$Site <- ifelse(pecosQ$site_no == 08412500, "Orla",
                               NA)))
 
 pecosQ$Site<-factor(pecosQ$Site, levels = c("Orla", "Iraan", "Sheffield"), ordered=TRUE)
-
-#write_csv(HD_Q, "~/Dropbox/HesterDendy/HD_Q.csv")
 ```
 
 
@@ -109,8 +120,7 @@ pecosQplot <- ggplot(pecosQ, aes(Date, Flow))+
   scale_linetype_manual(values=c("solid", "dashed", "dotted"))+
   scale_x_date(date_labels = "%b", breaks = "month")
   #facet_wrap(~Site, ncol=3, scales= "free")
-
-#ggsave("Q.png", HD, device = NULL, "/Users/connor/Dropbox/Hester Dendy Project/", width = 6.5, height = 3.66, units = "in")
+pecosQplot
 ```
 Manual Cond meas.
 ```{r}
@@ -120,32 +130,6 @@ spCond <- data.frame(Date = as.Date(c("2017-06-30", "2017-10-10", "2017-10-10"))
 
 Working on new fig for MS after revisions
 ```{r}
-ggplot(pecosQ, aes(Date, Flow))+
-  geom_line(aes(linetype = Site)) +
-  scale_y_continuous(breaks = c(0, 2, 4, 6, 8, 10, 12, 14)) +
-  labs(y = expression(Discharge~(m^3/s)), x = element_blank())+
-  theme_clean()+
- # theme(legend.title= element_blank(), axis.text = element_text(size = 10), axis.title = element_text(size = 12), legend.position = c(0.835, 0.89), legend.background = element_blank())+
-#  scale_linetype_manual(values=c("solid", "dashed", "dotted"))
-  facet_wrap(~Site, scales= "free", ncol = 1)
-#ggsave("Q.png", HD, device = NULL, "/Users/connor/Dropbox/Hester Dendy Project/", width = 6.5, height = 3.66, units = "in")
-
-ggplot(pecosQ, aes(Date, SpecCond))+
-  geom_line(aes(linetype = Site)) +
-  annotate("rect",
-    xmin = as.Date("2017-06-30"), xmax = as.Date("2017-08-11"), 
-    ymin = -Inf, ymax = Inf,  fill = "black", alpha=.3)+
-  annotate("rect",
-    xmin = as.Date("2017-10-10"), xmax = as.Date("2017-12-05"), 
-    ymin = -Inf, ymax = Inf,  fill = "black", alpha=.3)+
-  labs(y = expression(~pecific~Conductivity~(mu*S/cm)), x = element_blank())+
-  theme_classic()+
-  theme(legend.title= element_blank(), axis.text = element_text(size = 10), axis.title = element_text(size = 12), legend.position = c(0.835, 0.89), legend.background = element_blank())+
-  scale_linetype_manual(values=c("solid", "dashed", "dotted"))+
-  scale_x_date(date_labels = "%b", breaks = "month")
-#facet_wrap(~Site, ncol=3, scales= "free")
-
-
 pecosCond <- ggplot(pecosQ, aes(Date, SpecCond))+
   geom_line(aes(linetype = Site)) +
   geom_point(data = spCond, aes(x = Date, y = SpecCond), shape = 8, size = 3)+
@@ -161,29 +145,12 @@ pecosCond <- ggplot(pecosQ, aes(Date, SpecCond))+
   theme(legend.title= element_blank(), axis.text = element_text(size = 10), axis.title = element_text(size = 12), legend.position = c(0.835, 0.89), legend.background = element_blank())+
   scale_linetype_manual(values=c("solid", "dashed", "dotted"))+
   scale_x_date(date_labels = "%b", breaks = "month")
-#facet_wrap(~Site, ncol=3, scales= "free")
+pecosCond
 
-New <- ggarrange(pecosQplot, pecosCond, ncol = 1, common.legend = T, legend = "top", align = "hv")
-ggsave("NewFig.png", New, device = NULL, "/Users/connor/Dropbox/Hester Dendy Project/", width = 6.5, height = 3.66, units = "in")
+msPlot <- ggarrange(pecosQplot, pecosCond, ncol = 1, common.legend = T, legend = "top", align = "hv")
+msPlot
+ggsave("PecosQ_SpC.png", msPlot, device = NULL, here("Figs/"), width = 6.5, height = 3.66, units = "in")
 
-```
-
-
-Testing log scale
-```{r}
-ggplot(pecosQ, aes(Date, log(Flow)))+
-  geom_line(aes(linetype = Site)) +
-  annotate("rect",
-    xmin = as.Date("2017-06-30"), xmax = as.Date("2017-08-11"), 
-    ymin = -Inf, ymax = Inf,  fill = "black", alpha=.3)+
-  annotate("rect",
-    xmin = as.Date("2017-10-10"), xmax = as.Date("2017-12-05"), 
-    ymin = -Inf, ymax = Inf,  fill = "black", alpha=.3)+
-  labs(y = expression(Discharge~(m^3/s)), x = element_blank())+
-  theme_classic()+
-  theme(legend.title= element_blank(), axis.text = element_text(size = 10), axis.title = element_text(size = 12), legend.background = element_blank(), axis.title.x = element_blank(), axis.text.x = element_blank())+
-  scale_linetype_manual(values=c("solid", "dashed", "dotted"))+
-  scale_x_date(date_labels = "%b", breaks = "month")
 ```
 
 
