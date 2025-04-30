@@ -7,6 +7,9 @@ This repository contains the data, code, and figures used in the following publi
 ## Study Overview  
 The Pecos River in the Permian Basin region (New Mexico and Texas) has experienced salinization due to altered flow regimes and anthropogenic impacts. This study assessed benthic macroinvertebrate communities using Hester-Dendy multi-plate samplers across three sites (two in the salinized Permian Basin region and one transitioning to the Edwards Plateau). Taxonomic richness was low, with salinity-tolerant taxa dominating the assemblages, while sensitive groups (Ephemeroptera, Plecoptera, and Trichoptera) were largely absent.  
 
+![Field photo of Hester-Dendy sampler deployment](Field%20Photos/Iraan_Upstream_Summer2017.JPG)  
+*Hester-Dendy sampler deployed in the Pecos River at Iraan (Summer 2017)*
+
 ## Citation  
 If you use any data or code from this repository, please cite the original paper:  
 
